@@ -33,6 +33,8 @@ interface CommonPackageInfo extends PackageInfo {
 }
 
 export class ChromiumArchivePaths {
+  public readonly revision = '856583';
+
   public readonly packages: Array<CustomPackageInfo | CommonPackageInfo> = [
     {
       platform: 'darwin',
