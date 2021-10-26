@@ -8,12 +8,12 @@
 import path from 'path';
 import { PageOrientation, PredefinedPageSize } from 'pdfmake/interfaces';
 import { EvaluateFn, SerializableOrJSHandle } from 'puppeteer';
-import { LevelLogger } from '../';
-import { DEFAULT_VIEWPORT, LAYOUT_TYPES } from '../../../common/constants';
-import { Size } from '../../../common/types';
-import { HeadlessChromiumDriver } from '../../browsers';
-import { CaptureConfig } from '../../types';
-import { getDefaultLayoutSelectors, LayoutInstance, LayoutSelectorDictionary } from './';
+import type { Logger } from 'src/core/server';
+import type { LayoutConfig, LayoutInstance, LayoutSelectorDictionary, Size } from '.';
+import { LayoutTypes } from '.';
+import { HeadlessChromiumDriver } from '../browsers';
+import { DEFAULT_VIEWPORT } from '../browsers';
+import { getDefaultLayoutSelectors } from '.';
 import { Layout } from './layout';
 
 export class PrintLayout extends Layout implements LayoutInstance {
@@ -22,12 +22,10 @@ export class PrintLayout extends Layout implements LayoutInstance {
     screenshot: '[data-shared-item]', // override '[data-shared-items-container]'
   };
   public readonly groupCount = 2;
-  private readonly captureConfig: CaptureConfig;
   private readonly viewport = DEFAULT_VIEWPORT;
 
-  constructor(captureConfig: CaptureConfig) {
-    super(LAYOUT_TYPES.PRINT);
-    this.captureConfig = captureConfig;
+  constructor(private readonly config: LayoutConfig) {
+    super(LayoutTypes.PRINT);
   }
 
   public getCssOverridesPath() {
@@ -39,26 +37,23 @@ export class PrintLayout extends Layout implements LayoutInstance {
   }
 
   public getBrowserZoom() {
-    return this.captureConfig.zoom;
+    return this.config.zoom;
   }
 
   public getViewport(itemsCount: number) {
     return {
-      zoom: this.captureConfig.zoom,
+      zoom: this.config.zoom,
       width: this.viewport.width,
       height: this.viewport.height * itemsCount,
     };
   }
 
-  public async positionElements(
-    browser: HeadlessChromiumDriver,
-    logger: LevelLogger
-  ): Promise<void> {
+  public async positionElements(browser: HeadlessChromiumDriver, logger: Logger): Promise<void> {
     logger.debug('positioning elements');
 
     const elementSize: Size = {
-      width: this.viewport.width / this.captureConfig.zoom,
-      height: this.viewport.height / this.captureConfig.zoom,
+      width: this.viewport.width / this.config.zoom,
+      height: this.viewport.height / this.config.zoom,
     };
     const evalOptions: { fn: EvaluateFn; args: SerializableOrJSHandle[] } = {
       fn: (selector: string, height: number, width: number) => {
