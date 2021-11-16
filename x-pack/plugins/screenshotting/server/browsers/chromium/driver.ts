@@ -8,19 +8,15 @@
 import { i18n } from '@kbn/i18n';
 import { map, truncate } from 'lodash';
 import open from 'opn';
-import puppeteer, { ElementHandle, EvaluateFn, SerializableOrJSHandle } from 'puppeteer';
+import puppeteer, { ElementHandle, EvaluateFn, Page, SerializableOrJSHandle } from 'puppeteer';
 import { parse as parseUrl } from 'url';
 import { Logger } from 'src/core/server';
 import {
   KBN_SCREENSHOT_MODE_HEADER,
   ScreenshotModePluginSetup,
 } from '../../../../../../src/plugins/screenshot_mode/server';
-import { allowRequest, NetworkPolicy } from '../network_policy';
-
-export interface ChromiumDriverOptions {
-  inspect: boolean;
-  networkPolicy: NetworkPolicy;
-}
+import { ConfigType } from '../../config';
+import { allowRequest } from '../network_policy';
 
 export interface ConditionalHeadersConditions {
   protocol: string;
@@ -105,14 +101,12 @@ export class HeadlessChromiumDriver {
 
   constructor(
     private screenshotMode: ScreenshotModePluginSetup,
-    private readonly page: puppeteer.Page,
-    private options: ChromiumDriverOptions
+    private config: ConfigType,
+    private readonly page: Page
   ) {}
 
   private allowRequest(url: string) {
-    return (
-      !this.options.networkPolicy.enabled || allowRequest(url, this.options.networkPolicy.rules)
-    );
+    return !this.config.networkPolicy.enabled || allowRequest(url, this.config.networkPolicy.rules);
   }
 
   private truncateUrl(url: string) {
@@ -145,7 +139,7 @@ export class HeadlessChromiumDriver {
     this.registerListeners(conditionalHeaders, logger);
     await this.page.goto(url, { waitUntil: 'domcontentloaded' });
 
-    if (this.options.inspect) {
+    if (this.config.browser.chromium.inspect) {
       await this.launchDebugger();
     }
 
