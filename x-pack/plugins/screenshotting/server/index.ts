@@ -5,6 +5,7 @@
  * 2.0.
  */
 
+import 'reflect-metadata';
 import { ScreenshottingPlugin } from './plugin';
 
 export function plugin(...args: ConstructorParameters<typeof ScreenshottingPlugin>) {
