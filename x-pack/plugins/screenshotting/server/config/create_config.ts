@@ -15,9 +15,7 @@ import { ConfigType } from './schema';
  * Set up dynamic config defaults
  * - xpack.capture.browser.chromium.disableSandbox
  */
-export async function createConfig(parentLogger: Logger, config: ConfigType) {
-  const logger = parentLogger.get('config');
-
+export async function createConfig(logger: Logger, config: ConfigType) {
   if (config.browser.chromium.disableSandbox != null) {
     // disableSandbox was set by user
     return config;

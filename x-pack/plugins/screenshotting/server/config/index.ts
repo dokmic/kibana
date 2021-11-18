@@ -42,5 +42,5 @@ export const config: PluginConfigDescriptor<ConfigType> = {
   },
 };
 
-export { createConfig } from './create_config';
+export { ConfigModule } from './module';
 export { ConfigType } from './schema';

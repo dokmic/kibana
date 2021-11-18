@@ -17,7 +17,7 @@ import type {
 } from 'src/core/server';
 import type { ScreenshotModePluginSetup } from 'src/plugins/screenshot_mode/server';
 import { HeadlessChromiumDriverFactory, installBrowser } from './browsers';
-import { createConfig, ConfigType } from './config';
+import { ConfigModule, ConfigType } from './config';
 import { getScreenshots, ScreenshotOptions } from './screenshots';
 import * as Services from './services';
 
@@ -37,6 +37,7 @@ export class ScreenshottingPlugin implements Plugin<void, ScreenshottingStart, S
   constructor(context: PluginInitializerContext<ConfigType>) {
     const logger = context.logger.get();
 
+    this.container.load(ConfigModule());
     this.container.bind(Services.Config).toConstantValue(context.config.get());
     this.container.bind(Services.Logger).toConstantValue(logger).whenTargetIsDefault();
     this.container
@@ -53,7 +54,7 @@ export class ScreenshottingPlugin implements Plugin<void, ScreenshottingStart, S
       try {
         const logger = this.container.getNamed<Logger>(Services.Logger, 'chromium');
         const [config, binaryPath] = await Promise.all([
-          createConfig(this.container.get(Services.Logger), this.container.get(Services.Config)),
+          this.container.getAsync<ConfigType>(Services.Config),
           installBrowser(logger),
         ]);
 
