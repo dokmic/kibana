@@ -13,3 +13,4 @@ export {
   HeadlessChromiumDriver,
   HeadlessChromiumDriverFactory,
 } from './chromium';
+export { BrowsersModule } from './module';

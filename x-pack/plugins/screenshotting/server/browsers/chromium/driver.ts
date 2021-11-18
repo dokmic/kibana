@@ -5,6 +5,7 @@
  * 2.0.
  */
 
+import { injectable, inject } from 'inversify';
 import { i18n } from '@kbn/i18n';
 import { map, truncate } from 'lodash';
 import open from 'opn';
@@ -17,6 +18,7 @@ import {
 } from '../../../../../../src/plugins/screenshot_mode/server';
 import { Context, SCREENSHOTTING_CONTEXT_KEY } from '../../../common/context';
 import { ConfigType } from '../../config';
+import * as Services from '../../services';
 import { allowRequest } from '../network_policy';
 
 export interface ConditionalHeadersConditions {
@@ -97,14 +99,17 @@ function getDisallowedOutgoingUrlError(interceptedUrl: string) {
   );
 }
 
+export const PageToken = Symbol.for('Page');
+
+@injectable()
 export class HeadlessChromiumDriver {
   private listenersAttached = false;
   private interceptedCount = 0;
 
   constructor(
-    private screenshotMode: ScreenshotModePluginSetup,
-    private config: ConfigType,
-    private readonly page: Page
+    @inject(Services.ScreenshotMode) private screenshotMode: ScreenshotModePluginSetup,
+    @inject(Services.Config) private config: ConfigType,
+    @inject(PageToken) private page: Page
   ) {}
 
   private allowRequest(url: string) {

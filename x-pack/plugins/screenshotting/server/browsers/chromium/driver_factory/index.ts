@@ -5,6 +5,7 @@
  * 2.0.
  */
 
+import { injectable, inject, named, interfaces } from 'inversify';
 import { i18n } from '@kbn/i18n';
 import { getDataPath } from '@kbn/utils';
 import { spawn } from 'child_process';
@@ -19,8 +20,8 @@ import * as Rx from 'rxjs';
 import { InnerSubscriber } from 'rxjs/internal/InnerSubscriber';
 import { catchError, ignoreElements, map, mergeMap, reduce, takeUntil, tap } from 'rxjs/operators';
 import type { Logger } from 'src/core/server';
-import type { ScreenshotModePluginSetup } from 'src/plugins/screenshot_mode/server';
 import { ConfigType } from '../../../config';
+import * as Services from '../../../services';
 import { getChromiumDisconnectedError } from '../';
 import { safeChildProcess } from '../../safe_child_process';
 import { HeadlessChromiumDriver } from '../driver';
@@ -31,6 +32,9 @@ interface CreatePageOptions {
   browserTimezone?: string;
   openUrlTimeout: number;
 }
+
+export const BinaryPathToken = Symbol.for('BinaryPath');
+export const HeadlessChromiumDriverFactoryToken = Symbol.for('HeadlessChromiumDriverFactory');
 
 export const DEFAULT_VIEWPORT = {
   width: 1950,
@@ -69,15 +73,17 @@ const DEFAULT_ARGS = [
 
 const DIAGNOSTIC_TIME = 5 * 1000;
 
+@injectable()
 export class HeadlessChromiumDriverFactory {
   private userDataDir = fs.mkdtempSync(path.join(getDataPath(), 'chromium-'));
   type = 'chromium';
 
   constructor(
-    private screenshotMode: ScreenshotModePluginSetup,
-    private config: ConfigType,
-    private logger: Logger,
-    private binaryPath: string
+    @inject(Services.Logger) @named('chromium') private logger: Logger,
+    @inject(Services.Config) private config: ConfigType,
+    @inject(BinaryPathToken) private binaryPath: string,
+    @inject(HeadlessChromiumDriverFactoryToken)
+    private driverFactory: interfaces.Factory<HeadlessChromiumDriver, [Page]>
   ) {
     if (this.config.browser.chromium.disableSandbox) {
       logger.warn(`Enabling the Chromium sandbox provides an additional layer of protection.`);
@@ -199,7 +205,7 @@ export class HeadlessChromiumDriverFactory {
       this.getProcessLogger(browser, logger).subscribe();
 
       // HeadlessChromiumDriver: object to "drive" a browser page
-      const driver = new HeadlessChromiumDriver(this.screenshotMode, this.config, page);
+      const driver = this.driverFactory(page);
 
       // Rx.Observable<never>: stream to interrupt page capture
       const exit$ = this.getPageExit(browser, page);

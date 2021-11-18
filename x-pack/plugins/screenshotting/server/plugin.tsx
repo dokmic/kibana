@@ -6,7 +6,7 @@
  */
 
 import { Container } from 'inversify';
-import { from } from 'rxjs';
+import { defer } from 'rxjs';
 import { switchMap } from 'rxjs/operators';
 import type {
   CoreSetup,
@@ -16,7 +16,7 @@ import type {
   PluginInitializerContext,
 } from 'src/core/server';
 import type { ScreenshotModePluginSetup } from 'src/plugins/screenshot_mode/server';
-import { HeadlessChromiumDriverFactory, installBrowser } from './browsers';
+import { BrowsersModule, HeadlessChromiumDriverFactory } from './browsers';
 import { ConfigModule, ConfigType } from './config';
 import { getScreenshots, ScreenshotOptions } from './screenshots';
 import * as Services from './services';
@@ -32,7 +32,6 @@ export interface ScreenshottingStart {
 
 export class ScreenshottingPlugin implements Plugin<void, ScreenshottingStart, SetupDeps> {
   private container = new Container({ skipBaseClassChecks: true });
-  private browserDriverFactory!: Promise<HeadlessChromiumDriverFactory>;
 
   constructor(context: PluginInitializerContext<ConfigType>) {
     const logger = context.logger.get();
@@ -50,40 +49,21 @@ export class ScreenshottingPlugin implements Plugin<void, ScreenshottingStart, S
 
   setup({}: CoreSetup, { screenshotMode }: SetupDeps) {
     this.container.bind(Services.ScreenshotMode).toConstantValue(screenshotMode);
-    this.browserDriverFactory = (async () => {
-      try {
-        const logger = this.container.getNamed<Logger>(Services.Logger, 'chromium');
-        const [config, binaryPath] = await Promise.all([
-          this.container.getAsync<ConfigType>(Services.Config),
-          installBrowser(logger),
-        ]);
-
-        return new HeadlessChromiumDriverFactory(
-          this.container.get(Services.ScreenshotMode),
-          config,
-          logger,
-          binaryPath
-        );
-      } catch (error) {
-        this.container
-          .get<Logger>(Services.Logger)
-          .error('Error in screenshotting setup, it may not function properly.');
-
-        throw error;
-      }
-    })();
 
     return {};
   }
 
   start({}: CoreStart): ScreenshottingStart {
     const scope = this.container.createChild();
+    scope.load(BrowsersModule());
 
     return {
       diagnose: () =>
-        from(this.browserDriverFactory).pipe(switchMap((factory) => factory.diagnose())),
+        defer(() => scope.getAsync(HeadlessChromiumDriverFactory)).pipe(
+          switchMap((factory) => factory.diagnose())
+        ),
       getScreenshots: (options) =>
-        from(this.browserDriverFactory).pipe(
+        defer(() => scope.getAsync(HeadlessChromiumDriverFactory)).pipe(
           switchMap((factory) =>
             getScreenshots(factory, scope.getNamed<Logger>(Services.Logger, 'screenshot'), options)
           )
