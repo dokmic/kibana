@@ -8,17 +8,11 @@
 import { Container } from 'inversify';
 import { defer } from 'rxjs';
 import { switchMap } from 'rxjs/operators';
-import type {
-  CoreSetup,
-  CoreStart,
-  Logger,
-  Plugin,
-  PluginInitializerContext,
-} from 'src/core/server';
+import type { CoreSetup, CoreStart, Plugin, PluginInitializerContext } from 'src/core/server';
 import type { ScreenshotModePluginSetup } from 'src/plugins/screenshot_mode/server';
 import { BrowsersModule, HeadlessChromiumDriverFactory } from './browsers';
 import { ConfigModule, ConfigType } from './config';
-import { getScreenshots, ScreenshotOptions } from './screenshots';
+import { Screenshots, ScreenshotsModule } from './screenshots';
 import * as Services from './services';
 
 interface SetupDeps {
@@ -27,7 +21,7 @@ interface SetupDeps {
 
 export interface ScreenshottingStart {
   diagnose: HeadlessChromiumDriverFactory['diagnose'];
-  getScreenshots(options: ScreenshotOptions): ReturnType<typeof getScreenshots>;
+  getScreenshots: Screenshots['getScreenshots'];
 }
 
 export class ScreenshottingPlugin implements Plugin<void, ScreenshottingStart, SetupDeps> {
@@ -56,6 +50,7 @@ export class ScreenshottingPlugin implements Plugin<void, ScreenshottingStart, S
   start({}: CoreStart): ScreenshottingStart {
     const scope = this.container.createChild();
     scope.load(BrowsersModule());
+    scope.load(ScreenshotsModule());
 
     return {
       diagnose: () =>
@@ -63,10 +58,8 @@ export class ScreenshottingPlugin implements Plugin<void, ScreenshottingStart, S
           switchMap((factory) => factory.diagnose())
         ),
       getScreenshots: (options) =>
-        defer(() => scope.getAsync(HeadlessChromiumDriverFactory)).pipe(
-          switchMap((factory) =>
-            getScreenshots(factory, scope.getNamed<Logger>(Services.Logger, 'screenshot'), options)
-          )
+        defer(() => scope.getAsync(Screenshots)).pipe(
+          switchMap((screenshots) => screenshots.getScreenshots(options))
         ),
     };
   }

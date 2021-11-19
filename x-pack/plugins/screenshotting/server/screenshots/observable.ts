@@ -5,13 +5,15 @@
  * 2.0.
  */
 
+import { injectable, inject } from 'inversify';
 import apm from 'elastic-apm-node';
 import { defer, forkJoin, throwError, Observable } from 'rxjs';
 import { catchError, mergeMap, switchMapTo, timeoutWith } from 'rxjs/operators';
 import type { Logger } from 'src/core/server';
-import type { ConditionalHeaders, HeadlessChromiumDriver } from '../browsers';
-import { getChromiumDisconnectedError } from '../browsers';
+import type { ConditionalHeaders } from '../browsers';
+import { getChromiumDisconnectedError, HeadlessChromiumDriver } from '../browsers';
 import type { Layout } from '../layouts';
+import * as Services from '../services';
 import type { ElementsPositionAndAttribute } from './get_element_position_data';
 import { getElementPositionAndAttributes } from './get_element_position_data';
 import { getNumberOfItems } from './get_number_of_items';
@@ -87,12 +89,16 @@ const getDefaultViewPort = () => ({
   zoom: 1,
 });
 
+export const LayoutToken = Symbol.for('LayoutToken');
+export const ScreenshotObservableOptionsToken = Symbol.for('ScreenshotObservableOptions');
+
+@injectable()
 export class ScreenshotObservableHandler {
   constructor(
-    private readonly driver: HeadlessChromiumDriver,
-    private readonly logger: Logger,
-    private readonly layout: Layout,
-    private options: ScreenshotObservableOptions
+    @inject(HeadlessChromiumDriver) private readonly driver: HeadlessChromiumDriver,
+    @inject(Services.Logger) private readonly logger: Logger,
+    @inject(LayoutToken) private readonly layout: Layout,
+    @inject(ScreenshotObservableOptionsToken) private options: ScreenshotObservableOptions
   ) {}
 
   /*
