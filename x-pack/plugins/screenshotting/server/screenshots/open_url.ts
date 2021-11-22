@@ -8,16 +8,18 @@
 import { i18n } from '@kbn/i18n';
 import apm from 'elastic-apm-node';
 import type { Logger } from 'src/core/server';
+import { Context } from '../../common';
 import type { HeadlessChromiumDriver } from '../browsers';
 import type { ConditionalHeaders } from '../browsers';
 import { DEFAULT_PAGELOAD_SELECTOR } from './constants';
+import type { UrlOrUrlWithContext } from '.';
 
 export const openUrl = async (
   browser: HeadlessChromiumDriver,
   logger: Logger,
   timeout: number,
   index: number,
-  url: string,
+  urlOrUrlWithContext: UrlOrUrlWithContext,
   conditionalHeaders: ConditionalHeaders
 ): Promise<void> => {
   // If we're moving to another page in the app, we'll want to wait for the app to tell us
@@ -26,8 +28,17 @@ export const openUrl = async (
   const waitForSelector = page > 1 ? `[data-shared-page="${page}"]` : DEFAULT_PAGELOAD_SELECTOR;
   const span = apm.startSpan('open_url', 'wait');
 
+  let url: string;
+  let context: Context | undefined;
+
+  if (typeof urlOrUrlWithContext === 'string') {
+    url = urlOrUrlWithContext;
+  } else {
+    [url, context] = urlOrUrlWithContext;
+  }
+
   try {
-    await browser.open(url, { conditionalHeaders, waitForSelector, timeout }, logger);
+    await browser.open(url, { conditionalHeaders, context, waitForSelector, timeout }, logger);
   } catch (err) {
     logger.error(err);
     throw new Error(

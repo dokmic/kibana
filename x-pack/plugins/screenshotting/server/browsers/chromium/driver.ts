@@ -15,6 +15,7 @@ import {
   KBN_SCREENSHOT_MODE_HEADER,
   ScreenshotModePluginSetup,
 } from '../../../../../../src/plugins/screenshot_mode/server';
+import { Context, SCREENSHOTTING_CONTEXT_KEY } from '../../../common/context';
 import { ConfigType } from '../../config';
 import { allowRequest } from '../network_policy';
 
@@ -52,6 +53,7 @@ export interface Viewport {
 
 interface OpenOptions {
   conditionalHeaders: ConditionalHeaders;
+  context?: Context;
   waitForSelector: string;
   timeout: number;
 }
@@ -121,7 +123,7 @@ export class HeadlessChromiumDriver {
    */
   async open(
     url: string,
-    { conditionalHeaders, waitForSelector: pageLoadSelector, timeout }: OpenOptions,
+    { conditionalHeaders, context, waitForSelector: pageLoadSelector, timeout }: OpenOptions,
     logger: Logger
   ): Promise<void> {
     logger.info(`opening url ${url}`);
@@ -133,7 +135,22 @@ export class HeadlessChromiumDriver {
      * Integrate with the screenshot mode plugin contract by calling this function before any other
      * scripts have run on the browser page.
      */
-    await this.page.evaluateOnNewDocument(() => this.screenshotMode.setScreenshotModeEnabled());
+    await this.page.evaluateOnNewDocument(this.screenshotMode.setScreenshotModeEnabled);
+
+    if (context) {
+      await this.page.evaluateOnNewDocument(
+        (key: string, value: unknown) => {
+          Object.defineProperty(window, key, {
+            configurable: false,
+            writable: true,
+            enumerable: true,
+            value,
+          });
+        },
+        SCREENSHOTTING_CONTEXT_KEY,
+        context
+      );
+    }
 
     await this.page.setRequestInterception(true);
     this.registerListeners(conditionalHeaders, logger);
