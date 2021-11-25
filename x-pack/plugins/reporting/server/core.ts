@@ -7,8 +7,9 @@
 
 import Hapi from '@hapi/hapi';
 import * as Rx from 'rxjs';
-import { filter, first, map, take } from 'rxjs/operators';
+import { filter, first, map, pluck, switchMap, take } from 'rxjs/operators';
 import { ScreenshotModePluginSetup } from 'src/plugins/screenshot_mode/server';
+import type { ScreenshottingStart, ScreenshotResult } from '../../screenshotting/server';
 import {
   BasePath,
   IClusterClient,
@@ -28,13 +29,14 @@ import { SecurityPluginSetup } from '../../security/server';
 import { DEFAULT_SPACE_ID } from '../../spaces/common/constants';
 import { SpacesPluginSetup } from '../../spaces/server';
 import { TaskManagerSetupContract, TaskManagerStartContract } from '../../task_manager/server';
+import { REPORTING_REDIRECT_LOCATOR_STORE_KEY } from '../common/constants';
+import { durationToNumber } from '../common/schema_utils';
 import { ReportingConfig, ReportingSetup } from './';
-import { HeadlessChromiumDriverFactory } from './browsers/chromium/driver_factory';
 import { ReportingConfigType } from './config';
 import { checkLicense, getExportTypesRegistry, LevelLogger } from './lib';
 import { ReportingStore } from './lib/store';
 import { ExecuteReportTask, MonitorReportsTask, ReportTaskParams } from './lib/tasks';
-import { ReportingPluginRouter } from './types';
+import { ReportingPluginRouter, ScreenshotOptions } from './types';
 
 export interface ReportingInternalSetup {
   basePath: Pick<BasePath, 'set'>;
@@ -50,7 +52,6 @@ export interface ReportingInternalSetup {
 }
 
 export interface ReportingInternalStart {
-  browserDriverFactory: HeadlessChromiumDriverFactory;
   store: ReportingStore;
   savedObjects: SavedObjectsServiceStart;
   uiSettings: UiSettingsServiceStart;
@@ -58,6 +59,7 @@ export interface ReportingInternalStart {
   data: DataPluginStart;
   taskManager: TaskManagerStartContract;
   logger: LevelLogger;
+  screenshotting: ScreenshottingStart;
 }
 
 export class ReportingCore {
@@ -341,6 +343,36 @@ export class ReportingCore {
   public async getEsClient() {
     const startDeps = await this.getPluginStartDeps();
     return startDeps.esClient;
+  }
+
+  public getScreenshots(options: ScreenshotOptions): Rx.Observable<ScreenshotResult> {
+    return Rx.defer(() => this.getPluginStartDeps()).pipe(
+      pluck('screenshotting'),
+      switchMap((screenshotting) => {
+        const config = this.getConfig();
+        return screenshotting.getScreenshots({
+          ...options,
+
+          timeouts: {
+            loadDelay: durationToNumber(config.get('capture', 'loadDelay')),
+            openUrl: durationToNumber(config.get('capture', 'timeouts', 'openUrl')),
+            waitForElements: durationToNumber(config.get('capture', 'timeouts', 'waitForElements')),
+            renderComplete: durationToNumber(config.get('capture', 'timeouts', 'renderComplete')),
+          },
+
+          layout: {
+            zoom: config.get('capture', 'zoom'),
+            ...options.layout,
+          },
+
+          urls: options.urls.map((url) =>
+            typeof url === 'string'
+              ? url
+              : [url[0], { [REPORTING_REDIRECT_LOCATOR_STORE_KEY]: url[1] }]
+          ),
+        });
+      })
+    );
   }
 
   public trackReport(reportId: string) {

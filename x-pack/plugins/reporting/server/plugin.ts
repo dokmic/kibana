@@ -8,7 +8,6 @@
 import type { CoreSetup, CoreStart, Plugin, PluginInitializerContext } from 'src/core/server';
 import { PLUGIN_ID } from '../common/constants';
 import { ReportingCore } from './';
-import { initializeBrowserDriverFactory } from './browsers';
 import { buildConfig, registerUiSettings, ReportingConfigType } from './config';
 import { registerDeprecations } from './deprecations';
 import { LevelLogger, ReportingStore } from './lib';
@@ -98,11 +97,9 @@ export class ReportingPlugin
     (async () => {
       await reportingCore.pluginSetsUp();
 
-      const browserDriverFactory = await initializeBrowserDriverFactory(reportingCore, this.logger);
       const store = new ReportingStore(reportingCore, this.logger);
 
       await reportingCore.pluginStart({
-        browserDriverFactory,
         savedObjects: core.savedObjects,
         uiSettings: core.uiSettings,
         store,
@@ -110,6 +107,7 @@ export class ReportingPlugin
         data: plugins.data,
         taskManager: plugins.taskManager,
         logger: this.logger,
+        screenshotting: plugins.screenshotting,
       });
 
       // Note: this must be called after ReportingCore.pluginStart
