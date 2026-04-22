@@ -17,6 +17,9 @@ interface GetServerListenerOptions {
   configureTLS?: boolean;
 }
 
+const isRecoverableSocketError = (error: NodeJS.ErrnoException): boolean =>
+  error.code === 'EPIPE' || error.code === 'ECONNRESET';
+
 export function getServerListener(
   config: IHttpConfig,
   options: GetServerListenerOptions = {}
@@ -46,6 +49,15 @@ const configureHttp1Listener = (
   listener.setTimeout(config.socketTimeout);
   listener.on('timeout', (socket) => {
     socket.destroy();
+  });
+  listener.on('connection', (socket) => {
+    socket.on('error', (error) => {
+      if (isRecoverableSocketError(error)) {
+        socket.destroy(error);
+      } else {
+        throw error;
+      }
+    });
   });
   listener.on('clientError', (err, socket) => {
     if (socket.writable) {

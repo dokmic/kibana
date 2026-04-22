@@ -19,6 +19,11 @@ import { ByteSizeValue } from '@kbn/config-schema';
 import type { IHttpConfig } from './types';
 import { getServerListener } from './get_listener';
 
+const getEventHandler = <T>(onMock: jest.Mock, eventName: string): T | undefined =>
+  onMock.mock.calls.find(([registeredEventName]) => registeredEventName === eventName)?.[1] as
+    | T
+    | undefined;
+
 const createConfig = (parts: Partial<IHttpConfig>): IHttpConfig => ({
   host: 'localhost',
   protocol: 'http1',
@@ -53,6 +58,39 @@ describe('getServerListener', () => {
   });
 
   describe('When protocol is `http1`', () => {
+    it('registers a connection error handler that destroys sockets on EPIPE writes', () => {
+      const config = createConfig({ ssl: { enabled: false } });
+      const server = getServerListener(config);
+      const serverOnMock = server.on as jest.Mock;
+
+      const connectionHandler = getEventHandler<
+        (socket: { on: jest.Mock; destroy: jest.Mock }) => void
+      >(serverOnMock, 'connection');
+
+      expect(connectionHandler).toBeDefined();
+
+      const socket = {
+        on: jest.fn(),
+        destroy: jest.fn(),
+      };
+
+      connectionHandler!(socket);
+
+      const errorHandler = getEventHandler<(error: NodeJS.ErrnoException) => void>(
+        socket.on,
+        'error'
+      );
+
+      expect(errorHandler).toBeDefined();
+
+      const epipeError = Object.assign(new Error('write EPIPE'), {
+        code: 'EPIPE',
+      }) as NodeJS.ErrnoException;
+
+      expect(() => errorHandler!(epipeError)).not.toThrow();
+      expect(socket.destroy).toHaveBeenCalledWith(epipeError);
+    });
+
     describe('when TLS is enabled', () => {
       it('calls getServerTLSOptions with the correct parameters', () => {
         const config = createConfig({ ssl: { enabled: true } });
@@ -84,7 +122,6 @@ describe('getServerListener', () => {
         expect(server.setTimeout).toHaveBeenCalledTimes(1);
         expect(server.setTimeout).toHaveBeenCalledWith(config.socketTimeout);
 
-        expect(server.on).toHaveBeenCalledTimes(2);
         expect(server.on).toHaveBeenCalledWith('clientError', expect.any(Function));
         expect(server.on).toHaveBeenCalledWith('timeout', expect.any(Function));
       });
@@ -129,7 +166,6 @@ describe('getServerListener', () => {
         expect(server.setTimeout).toHaveBeenCalledTimes(1);
         expect(server.setTimeout).toHaveBeenCalledWith(config.socketTimeout);
 
-        expect(server.on).toHaveBeenCalledTimes(2);
         expect(server.on).toHaveBeenCalledWith('clientError', expect.any(Function));
         expect(server.on).toHaveBeenCalledWith('timeout', expect.any(Function));
       });
