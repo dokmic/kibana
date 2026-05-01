@@ -29,18 +29,24 @@ large response bodies for every in-flight request.
 
 ## Tunables
 
-The default `/large` response is 256 KiB sent over about 6.4 seconds:
+The default `/large` response is 256 KiB sent over about 1.6 seconds:
 
 ```text
 CHUNKS=16
 CHUNK_SIZE=16384
-DELAY_MS=400
+DELAY_MS=100
 ```
 
 Those values intentionally keep each response bigger than a tiny health check
 but small enough that JMeter is less likely to fail with `java.lang.OutOfMemoryError`
-before it can exercise hapi. Increase `CHUNKS` or `CHUNK_SIZE` if your load
-generator has enough heap and you want larger payload pressure.
+or run out of free threads before it can exercise hapi. Increase `CHUNKS`,
+`CHUNK_SIZE`, or `DELAY_MS` if your load generator has enough heap and threads
+and you want larger payload pressure.
+
+The request timeout in `blazemeter.yml` is 1000ms. That is shorter than the
+default response duration so JMeter clients abort some in-flight responses while
+still recycling threads fast enough to keep up with the issue's throughput
+profile.
 
 The Taurus config also sets:
 

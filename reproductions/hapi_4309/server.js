@@ -80,7 +80,7 @@ const init = async () => {
     path: '/large',
     handler: (request, h) => {
       const chunks = Number(request.query.chunks || process.env.CHUNKS || 16);
-      const delayMs = Number(request.query.delayMs || process.env.DELAY_MS || 400);
+      const delayMs = Number(request.query.delayMs || process.env.DELAY_MS || 100);
       const chunkSize = Number(request.query.chunkSize || process.env.CHUNK_SIZE || 16384);
       const stream = makeSlowStream({ chunks, delayMs, chunkSize });
 

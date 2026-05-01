@@ -18,7 +18,7 @@ scenarios:
       - label: GET /large
         method: GET
         url: http://localhost:3000/large
-        timeout: 5000ms
+        timeout: 1000ms
 
 reporting:
   - module: console
