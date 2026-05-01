@@ -13,9 +13,10 @@ throughput: 500
 ```
 
 The report does not include the original application route, so this
-reproduction uses a minimal hapi server with a slow, large streaming response.
-Under high concurrency and client timeouts/aborts, this makes the broken-pipe
-condition observable in the container logs.
+reproduction uses a minimal hapi server with a slow streaming response. Under
+high concurrency and client timeouts/aborts, this makes the broken-pipe
+condition observable in the container logs without making JMeter retain very
+large response bodies for every in-flight request.
 
 ## Files
 
@@ -25,6 +26,32 @@ condition observable in the container logs.
 - `blazemeter.yml` - Taurus/BlazeMeter config using the issue's profile.
 - `reproduce.sh` - convenience wrapper that builds the container and runs the
   local BlazeMeter-compatible load test through Taurus.
+
+## Tunables
+
+The default `/large` response is 256 KiB sent over about 6.4 seconds:
+
+```text
+CHUNKS=16
+CHUNK_SIZE=16384
+DELAY_MS=400
+```
+
+Those values intentionally keep each response bigger than a tiny health check
+but small enough that JMeter is less likely to fail with `java.lang.OutOfMemoryError`
+before it can exercise hapi. Increase `CHUNKS` or `CHUNK_SIZE` if your load
+generator has enough heap and you want larger payload pressure.
+
+The Taurus config also sets:
+
+```yaml
+modules:
+  jmeter:
+    memory-xmx: 4G
+```
+
+Raise or lower that value to match the memory available to the Taurus/JMeter
+container.
 
 ## Run
 

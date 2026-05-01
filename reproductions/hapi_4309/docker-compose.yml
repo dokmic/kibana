@@ -7,9 +7,9 @@ services:
       - "3000:3000"
     environment:
       PORT: 3000
-      CHUNKS: 512
-      DELAY_MS: 5
-      CHUNK_SIZE: 65536
+      CHUNKS: 16
+      DELAY_MS: 400
+      CHUNK_SIZE: 16384
 
   blazemeter:
     image: blazemeter/taurus

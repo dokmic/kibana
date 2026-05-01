@@ -1,4 +1,9 @@
 ---
+modules:
+  jmeter:
+    # The issue's 1000-thread profile can exhaust JMeter before it stresses hapi.
+    memory-xmx: 4G
+
 execution:
   - executor: jmeter
     concurrency: 1000

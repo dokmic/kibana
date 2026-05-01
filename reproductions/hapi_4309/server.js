@@ -79,9 +79,9 @@ const init = async () => {
     method: 'GET',
     path: '/large',
     handler: (request, h) => {
-      const chunks = Number(request.query.chunks || process.env.CHUNKS || 512);
-      const delayMs = Number(request.query.delayMs || process.env.DELAY_MS || 5);
-      const chunkSize = Number(request.query.chunkSize || process.env.CHUNK_SIZE || 65536);
+      const chunks = Number(request.query.chunks || process.env.CHUNKS || 16);
+      const delayMs = Number(request.query.delayMs || process.env.DELAY_MS || 400);
+      const chunkSize = Number(request.query.chunkSize || process.env.CHUNK_SIZE || 16384);
       const stream = makeSlowStream({ chunks, delayMs, chunkSize });
 
       return h
