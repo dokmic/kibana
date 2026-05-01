@@ -85,8 +85,11 @@ If Taurus is not installed locally, use:
 ./reproduce.sh
 ```
 
-That script runs Taurus from the `blazemeter/taurus` Docker image while the hapi
-server remains in the Node 16.19.1 container.
+That script starts the hapi container in the background, runs Taurus from the
+`blazemeter/taurus` Docker image as a one-shot container, then stops hapi when
+the load run exits. This avoids `docker compose up --abort-on-container-exit`
+signal handling that can make Taurus print `WARNING: Interrupted by user` even
+when no manual interrupt occurred.
 
 ## Expected signal
 

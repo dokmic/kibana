@@ -15,8 +15,6 @@ services:
     image: blazemeter/taurus
     profiles:
       - load-test
-    depends_on:
-      - hapi-4309
     network_mode: "service:hapi-4309"
     working_dir: /bzt-configs
     volumes:
