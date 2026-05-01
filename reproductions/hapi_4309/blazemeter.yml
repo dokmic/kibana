@@ -1,0 +1,19 @@
+---
+execution:
+  - executor: jmeter
+    concurrency: 1000
+    ramp-up: 15m
+    hold-for: 15m
+    throughput: 500
+    scenario: hapi-large-response
+
+scenarios:
+  hapi-large-response:
+    requests:
+      - label: GET /large
+        method: GET
+        url: http://localhost:3000/large
+        timeout: 5000ms
+
+reporting:
+  - module: console
