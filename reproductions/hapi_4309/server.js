@@ -16,7 +16,7 @@ const makeSlowStream = ({ chunks, delayMs, chunkSize }) => {
     }
   }
 
-  return Readable.from(generate());
+  return Readable.from(generate(), { objectMode: false });
 };
 
 const formatError = (error) => ({
