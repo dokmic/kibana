@@ -6,7 +6,10 @@ modules:
 
 execution:
   - executor: jmeter
-    concurrency: 1000
+    # Keep throughput at the issue's 500 RPS target, but allow more JMeter
+    # worker threads so long-running or timed-out requests do not starve the
+    # thread group during ramp-up.
+    concurrency: 2000
     ramp-up: 15m
     hold-for: 15m
     throughput: 500

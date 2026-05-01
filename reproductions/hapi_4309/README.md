@@ -59,6 +59,11 @@ modules:
 Raise or lower that value to match the memory available to the Taurus/JMeter
 container.
 
+If JMeter reports `No free threads available in current Thread Group`, increase
+the `concurrency` value in `blazemeter.yml`. The file defaults to `2000` threads
+for this reason, while preserving the issue's `ramp-up` and `throughput`
+settings.
+
 ## Run
 
 From this directory:
