@@ -1,0 +1,12 @@
+{
+  "name": "hapi-issue-4309-reproduction",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Dockerized reproduction harness for hapijs/hapi#4309 write EPIPE under BlazeMeter load.",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@hapi/hapi": "20.2.1"
+  }
+}

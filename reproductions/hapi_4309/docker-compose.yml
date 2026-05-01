@@ -1,0 +1,23 @@
+services:
+  hapi-4309:
+    build: .
+    image: hapi-4309-repro:node-16.19.1
+    container_name: hapi-4309-repro
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: 3000
+      CHUNKS: 16
+      DELAY_MS: 100
+      CHUNK_SIZE: 16384
+
+  blazemeter:
+    image: blazemeter/taurus
+    profiles:
+      - load-test
+    network_mode: "service:hapi-4309"
+    working_dir: /bzt-configs
+    volumes:
+      - ./blazemeter.yml:/bzt-configs/blazemeter.yml:ro
+    command:
+      - blazemeter.yml

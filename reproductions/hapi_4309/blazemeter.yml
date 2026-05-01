@@ -1,0 +1,27 @@
+---
+modules:
+  jmeter:
+    # The issue's 1000-thread profile can exhaust JMeter before it stresses hapi.
+    memory-xmx: 4G
+
+execution:
+  - executor: jmeter
+    # Keep throughput at the issue's 500 RPS target, but allow more JMeter
+    # worker threads so long-running or timed-out requests do not starve the
+    # thread group during ramp-up.
+    concurrency: 2000
+    ramp-up: 15m
+    hold-for: 15m
+    throughput: 500
+    scenario: hapi-large-response
+
+scenarios:
+  hapi-large-response:
+    requests:
+      - label: GET /large
+        method: GET
+        url: http://localhost:3000/large
+        timeout: 1000ms
+
+reporting:
+  - module: console
